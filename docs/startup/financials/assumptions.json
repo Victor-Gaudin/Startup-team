@@ -1,0 +1,90 @@
+{
+  "business_name": "AI Agent Payments Dashboard",
+  "product": "Developer SDK + dashboard giving AI agents their own Stripe-powered payment accounts",
+  "model_date": "2026-04-30",
+  "description": "Freemium SaaS: Free tier (1 agent), $29/mo (5 agents), $99/mo (unlimited), +usage fees at scale",
+
+  "pricing_tiers": {
+    "free": { "name": "Free", "price_monthly": 0, "agents": 1, "features": ["Basic dashboard", "1 agent"] },
+    "starter": { "name": "Starter", "price_monthly": 29, "agents": 5, "features": ["Full SDK", "Dashboard", "5 agents"] },
+    "pro": { "name": "Pro", "price_monthly": 99, "agents": 999, "features": ["Unlimited agents", "Priority support", "Advanced analytics"] },
+    "usage": { "name": "Usage", "price_model": "per_transaction", "fee": 0.005, "description": "Usage fees at scale (0.5% of transaction volume)" }
+  },
+
+  "revenue_scenarios": {
+    "bear": {
+      "initial_mrr": 0,
+      "mrr_12_target": 3000,
+      "arpu": 29,
+      "net_growth_monthly": 0.35,
+      "churn_monthly": 0.06,
+      "gross_margin": 0.82
+    },
+    "base": {
+      "initial_mrr": 200,
+      "mrr_12_target": 15000,
+      "arpu": 49,
+      "net_growth_monthly": 0.65,
+      "churn_monthly": 0.04,
+      "gross_margin": 0.85
+    },
+    "bull": {
+      "initial_mrr": 200,
+      "mrr_12_target": 40000,
+      "arpu": 65,
+      "net_growth_monthly": 1.20,
+      "churn_monthly": 0.03,
+      "gross_margin": 0.87
+    }
+  },
+
+  "cost_structure": {
+    "stripe_fees": {
+      "percent": 0.03,
+      "description": "Stripe transaction fees on payment receipts"
+    },
+    "hosting": {
+      "bear": 50,
+      "base": 150,
+      "bull": 300,
+      "description": "Monthly hosting/infrastructure cost"
+    },
+    "headcount": {
+      "founder_salary": 8000,
+      "engineer_salary": 12000,
+      "first_hire_month": 10,
+      "solo_months": 9
+    },
+    "marketing": {
+      "cac_hn": 0,
+      "cac_discord": 0,
+      "description": "Zero CAC via HN launch and AI agent Discord communities"
+    }
+  },
+
+  "unit_economics": {
+    "cac": {
+      "hacker_news": 0,
+      "discord": 0,
+      "organic": 5,
+      "blended": 2
+    },
+    "payback_months": {
+      "bear": 0.4,
+      "base": 0.2,
+      "bull": 0.1
+    }
+  },
+
+  "key_metrics_targets": {
+    "break_even_month_bear": 10,
+    "break_even_month_base": 9,
+    "break_even_month_bull": 8,
+    "mrr_24_months_bear": 18000,
+    "mrr_24_months_base": 180000,
+    "mrr_24_months_bull": 850000,
+    "capital_needed_bear": 85000,
+    "capital_needed_base": 78000,
+    "capital_needed_bull": 52000
+  }
+}

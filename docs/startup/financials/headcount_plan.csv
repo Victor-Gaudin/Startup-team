@@ -1,0 +1,41 @@
+=== HEADCOUNT PLAN: AI Agent Payments Dashboard ===
+=== Solo Founder for 9+ Months, First Hire at Month 10 ===
+
+[ASSUMPTION] Solo founder months 1-9
+[ASSUMPTION] First engineer hired month 10 ($12,000/mo)
+[ASSUMPTION] Second engineer hired month 18 ($12,000/mo)
+[ASSUMPTION] Support/success hired month 20 ($8,000/mo)
+[ASSUMPTION] Salaries: Founder=$8K/mo (pre-raise), Engineer=$12K/mo, Support=$8K/mo
+
+MONTH,HEADCOUNT,FOUNDER,ENGINEER_1,ENGINEER_2,SUPPORT_1,MONTHLY_SALARY_TOTAL
+1,1,1,0,0,0,8000
+2,1,1,0,0,0,8000
+3,1,1,0,0,0,8000
+4,1,1,0,0,0,8000
+5,1,1,0,0,0,8000
+6,1,1,0,0,0,8000
+7,1,1,0,0,0,8000
+8,1,1,0,0,0,8000
+9,1,1,0,0,0,8000
+10,2,1,1,0,0,20000
+11,2,1,1,0,0,20000
+12,2,1,1,0,0,20000
+13,2,1,1,0,0,20000
+14,2,1,1,0,0,20000
+15,2,1,1,0,0,20000
+16,2,1,1,0,0,20000
+17,2,1,1,0,0,20000
+18,3,1,1,1,0,32000
+19,3,1,1,1,0,32000
+20,4,1,1,1,1,44000
+21,4,1,1,1,1,44000
+22,4,1,1,1,1,44000
+23,4,1,1,1,1,44000
+24,4,1,1,1,1,44000
+
+=== CUMULATIVE HIRING SUMMARY ===
+METRIC,VALUE
+Total hires (24 months),3 (2 engineers + 1 support)
+Max headcount,4
+Total salary cost (24 months),528000
+Average monthly salary (after mo 10),24000

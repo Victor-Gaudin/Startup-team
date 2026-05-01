@@ -1,0 +1,58 @@
+=== UNIT ECONOMICS: AI Agent Payments Dashboard ===
+=== CAC, LTV, ARPU, Churn, Gross Margin ===
+
+=== CUSTOMER ACQUISITION COST (CAC) ===
+[ASSUMPTION] Zero CAC via HN launch + AI agent Discord communities
+CHANNEL,CAC,NOTES
+Hacker News,$0,Organic launch — time investment only
+Discord,$0,Community engagement — time investment only
+Organic Search,$5,Minimal SEO content
+Blended Average,$2,Weighted across all channels
+
+=== AVERAGE REVENUE PER USER (ARPU) ===
+[ASSUMPTION] Tier mix drives blended ARPU
+TIER,PRICE,BEAR_MIX,BASE_MIX,BULL_MIX
+Free,$0,60%,50%,40%
+Starter,$29,30%,35%,40%
+Pro,$99,10%,15%,20%
+BLENDED ARPU,,$29,$49,$65
+
+=== LTV BY SCENARIO ===
+[ASSUMPTION] LTV = ARPU * Gross Margin / Churn
+SCENARIO,CHURN_MONTHLY,AVG_LIFESPAN_MO,ARPU,GROSS_MARGIN,LTV
+Bear,6%,16.7,$29,82%,$395
+Base,4%,25.0,$49,85%,$1041
+Bull,3%,33.3,$65,87%,$1885
+
+=== LTV:CAC RATIO ===
+SCENARIO,LTV,CAC,LTV_CAC_RATIO,INDUSTRY_TARGET,STATUS
+Bear,$395,$2,198:1,>3:1,EXCEPTIONAL
+Base,$1041,$2,521:1,>3:1,EXCEPTIONAL
+Bull,$1885,$2,943:1,>3:1,EXCEPTIONAL
+
+=== PAYBACK PERIOD ===
+[ASSUMPTION] Payback = CAC / (ARPU * Gross Margin)
+SCENARIO,CAC,ARPU,GROSS_MARGIN,MONTHLY_GROSS_PROFIT,PAYBACK_MONTHS
+Bear,$2,$29,82%,$23.78,0.08
+Base,$2,$49,85%,$41.65,0.05
+Bull,$2,$65,87%,$56.55,0.04
+
+=== GROSS MARGIN COMPONENTS ===
+REVENUE_COMPONENT,COST_COMPONENT,COST_PER_UNIT
+MRR Revenue,Stripe fees (3%),-3.0%
+,Hosting (per customer),-$0.50
+GROSS_MARGIN,,82-87%
+
+=== CHURN ANALYSIS ===
+[ASSUMPTION] Churn drivers for developer SDK product:
+CHURN_REASON,ESTIMATED_PORTION,MITIGATION
+Project abandoned,40%,Onboarding emails, usage alerts
+Built own integration,35%,API docs quality, SDK improvements
+Competitor switch,25%,Feature velocity, relationship
+
+=== CUSTOMER METRICS (Base Scenario) ===
+METRIC,VALUE
+Avg agents per customer,3.2
+Avg transactions per agent month,12
+Avg transaction value,$50
+Usage fee revenue (% of total),8%
