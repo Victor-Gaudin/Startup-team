@@ -1,0 +1,3 @@
+date,prospect_id,company,channel,language,template,subject,sent_by,status,reply_date,reply_summary,follow_up_count,notes
+# No messages sent yet. Sending requires a connected email channel / owner business email (see setup/owner-setup-checklist.md).
+# Every send MUST be logged here. Max 10-20 personalised messages/day. One contact per company until reply.

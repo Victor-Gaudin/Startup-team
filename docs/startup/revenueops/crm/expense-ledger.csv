@@ -1,0 +1,3 @@
+date,item,category,amount_eur,recurring,approved_by,approval_date,notes
+# Budget = 0 EUR. No expense may be incurred without explicit owner approval.
+# All current tools are free tier (GitHub Pages, Google Sheets/Docs, TED Open Data, Stripe pay-per-transaction).
