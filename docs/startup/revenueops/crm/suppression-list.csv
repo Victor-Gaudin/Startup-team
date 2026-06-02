@@ -1,0 +1,3 @@
+date_added,company,contact_or_domain,reason,added_by
+# Anyone who opts out ("no thanks" / "non merci" / "no, gracias") or asks to stop goes here IMMEDIATELY and is never contacted again.
+# Empty at launch.

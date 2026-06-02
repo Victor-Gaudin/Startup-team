@@ -1,0 +1,3 @@
+date,customer,offer,plan,gross_eur,stripe_fee_eur,refunds_eur,net_eur,payment_method,renewal_date,delivery_obligation,status,notes
+# No revenue yet. Record every payment here. net = gross - stripe_fee - refunds.
+# Weekly net target: 500 EUR.
