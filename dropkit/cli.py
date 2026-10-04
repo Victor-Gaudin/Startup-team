@@ -36,6 +36,7 @@ def status() -> None:
     _out(f"eBay app:      {'configured' if s.ebay_enabled else 'MISSING (EBAY_CLIENT_ID/SECRET)'}")
     _out(f"eBay account:  {'connected' if e.db.get_token('user_refresh') else 'not connected (dropkit ebay-connect)'}")
     _out(f"AliExpress:    {'API configured (auto-order on)' if s.aliexpress_enabled else 'page import only (no auto-order)'}")
+    _out(f"CJdropship:    {'API configured (auto-order on, US warehouses)' if s.cj_enabled else 'not configured (CJ_API_KEY)'}")
     _out(f"Policies:      {'set' if all([s.fulfillment_policy_id, s.payment_policy_id, s.return_policy_id]) else 'MISSING (dropkit ebay-policies)'}")
     _out(f"Margin:        target {s.target_margin:.0%}, minimum {s.min_margin:.0%}, promoted {s.promoted_rate:.0%}")
     counts = {}
@@ -93,7 +94,7 @@ def ebay_location(city: str, state: str, postal_code: str, country: str = "US") 
 # --- products -----------------------------------------------------------
 @app.command("import")
 def import_cmd(urls: list[str]) -> None:
-    """Import product(s) from AliExpress, Amazon, Cdiscount or any shop URL."""
+    """Import product(s) from AliExpress, CJdropshipping (URL or cj:<pid>), Amazon, Cdiscount or any shop URL."""
     e = _engine()
     for url in urls:
         try:
@@ -229,6 +230,74 @@ def run(interval_minutes: int = 30) -> None:
             _out(f"[{time.strftime('%H:%M')}] error: {exc}")
             e.db.log("error", f"run loop: {exc}")
         time.sleep(interval_minutes * 60)
+
+
+# --- verification & sourcing ---------------------------------------------
+@app.command()
+def verify(
+    name: str,
+    cost: float = typer.Option(0.0, help="Supplier unit cost"),
+    shipping: float = typer.Option(0.0, help="Supplier shipping cost"),
+    price: float = typer.Option(None, help="Your sale price (default: target-margin price)"),
+    days: int = typer.Option(None, help="Delivery days to the buyer"),
+    sold: int = typer.Option(None, help="eBay sold listings in the last 30 days"),
+    active: int = typer.Option(None, help="Active competing listings"),
+    market: float = typer.Option(None, help="Typical sold price"),
+    url: str = typer.Option("", help="Supplier URL (fills cost/shipping/delivery)"),
+    keywords: str = typer.Option("", help="eBay search keywords"),
+) -> None:
+    """Score a product idea 0-100 and estimate monthly revenue and profit."""
+    from .research import sold_search_url
+    from .scoring import CheckInput
+
+    e = _engine()
+    inp = CheckInput(name=name, supplier_cost=cost, supplier_shipping=shipping, sale_price=price, delivery_days=days,
+                     sold_30d=sold, active_listings=active, market_median=market, supplier_url=url, keywords=keywords)
+    _, inp, r = e.verify(inp)
+    _out(f"\n{name}: {r.score}/100 - {r.verdict} (confidence {r.confidence})")
+    _out(f"Price {r.price:.2f} | profit {r.unit_profit:.2f} per sale ({r.margin:.0%})")
+    if r.units:
+        _out(f"Est. sales/month {r.units[1]} ({r.units[0]}-{r.units[2]}) | revenue {r.revenue[1]:.0f} "
+             f"({r.revenue[0]:.0f}-{r.revenue[2]:.0f}) | profit {r.profit[1]:.0f} ({r.profit[0]:.0f}-{r.profit[2]:.0f})")
+    else:
+        _out(f"Monthly estimate needs the sold count: {sold_search_url(e.s.marketplace, keywords or name)}")
+    for c in r.components:
+        _out(f"  {c.name:<16} {c.points:>4.0f}/{c.max_points:<3} {c.note}")
+    for w in r.warnings:
+        _out(f"  ! {w}")
+
+
+@app.command()
+def checks() -> None:
+    """List verified products, best first."""
+    for row in _engine().db.checks():
+        r = json.loads(row["result"]) if row["result"] else {}
+        profit = f"{r['profit'][1]:.0f}/mo" if r.get("profit") else "needs sold count"
+        _out(f"#{row['id']:<4} {row['score'] if row['score'] is not None else '-':>3}  {r.get('verdict', ''):<22} {profit:<18} {row['name']}")
+
+
+@app.command()
+def candidates(path: Path = Path("research/candidates.json")) -> None:
+    """Load research candidates into the verification list."""
+    _out(f"Loaded {_engine().load_candidates(path)} candidate(s). Add sold counts with `dropkit verify` or the dashboard.")
+
+
+@app.command()
+def suppliers(query: str) -> None:
+    """Compare suppliers (CJ live offers with warehouse + delivery days, plus where else to look)."""
+    from .sourcing import compare
+
+    e = _engine()
+    result = compare(query, ship_to=e.s.ship_to_country, cj=e.cj)
+    for err in result.errors:
+        _out(f"note: {err}")
+    for o in result.offers:
+        days = f"{o.shipping_days_max}d" if o.shipping_days_max is not None else "?"
+        ship = f"+{o.shipping_cost:.2f}" if o.shipping_cost is not None else ""
+        _out(f"{o.supplier:<5} {o.ships_from or '?':<3} {days:>4}  {o.price:.2f}{ship:<7} {o.title[:60]}  {o.url}")
+    _out("\nAlso search:")
+    for link in result.links:
+        _out(f"  {link.name}: {link.url}\n      {link.note}")
 
 
 # --- research -----------------------------------------------------------

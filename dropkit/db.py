@@ -56,6 +56,16 @@ CREATE TABLE IF NOT EXISTS tokens (
     value TEXT NOT NULL,
     expires_at REAL
 );
+CREATE TABLE IF NOT EXISTS checks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    input TEXT NOT NULL,             -- scoring.CheckInput JSON
+    result TEXT,                     -- scoring.ScoreResult JSON (NULL = candidate not scored yet)
+    score INTEGER,
+    source TEXT DEFAULT 'manual',    -- manual | research
+    created_at REAL NOT NULL,
+    updated_at REAL NOT NULL
+);
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts REAL NOT NULL,
@@ -160,6 +170,31 @@ class DB:
             "SELECT COUNT(*) AS n FROM events WHERE kind = 'publish' AND ts >= ?", (since_ts,)
         ).fetchone()
         return int(row["n"])
+
+    # --- product checks -----------------------------------------------
+    def save_check(self, name: str, input_json: str, result_json: str | None, score: int | None,
+                   source: str = "manual", check_id: int | None = None) -> int:
+        now = time.time()
+        with self.tx() as c:
+            if check_id:
+                c.execute("UPDATE checks SET name=?, input=?, result=?, score=?, updated_at=? WHERE id=?",
+                          (name, input_json, result_json, score, now, check_id))
+                return check_id
+            cur = c.execute(
+                "INSERT INTO checks (name, input, result, score, source, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (name, input_json, result_json, score, source, now, now))
+            return int(cur.lastrowid)
+
+    def checks(self) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT * FROM checks ORDER BY (score IS NULL), score DESC, updated_at DESC").fetchall()
+
+    def check(self, check_id: int) -> sqlite3.Row | None:
+        return self.conn.execute("SELECT * FROM checks WHERE id = ?", (check_id,)).fetchone()
+
+    def delete_check(self, check_id: int) -> None:
+        with self.tx() as c:
+            c.execute("DELETE FROM checks WHERE id = ?", (check_id,))
 
     # --- orders -------------------------------------------------------
     def insert_order(self, **fields: Any) -> bool:

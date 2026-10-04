@@ -298,6 +298,24 @@ class EbayClient:
         return data.get("fulfillmentId", "")
 
     # --- market research ----------------------------------------------
+    def market_snapshot(self, query: str, limit: int = 50) -> dict:
+        """Active competition for a search: total listing count and price distribution (incl. shipping)."""
+        data = self.request(
+            "GET", "/buy/browse/v1/item_summary/search", user=False,
+            params={"q": query, "limit": limit, "filter": "buyingOptions:{FIXED_PRICE},conditions:{NEW}"},
+        )
+        totals = []
+        for item in data.get("itemSummaries", []):
+            price = float(item.get("price", {}).get("value", 0) or 0)
+            ship_opts = item.get("shippingOptions") or [{}]
+            ship = float((ship_opts[0].get("shippingCost") or {}).get("value", 0) or 0)
+            if price > 0:
+                totals.append(round(price + ship, 2))
+        totals.sort()
+        median = totals[len(totals) // 2] if totals else None
+        return {"active_listings": int(data.get("total", len(totals))), "median": median,
+                "low": totals[0] if totals else None, "high": totals[-1] if totals else None}
+
     def search_active(self, query: str, limit: int = 20) -> list[dict]:
         """Active competing listings (Browse API, app token). Returns price + shipping + title."""
         data = self.request(

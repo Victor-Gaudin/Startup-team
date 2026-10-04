@@ -23,6 +23,32 @@ class SupplierProduct(BaseModel):
     attributes: dict[str, str] = Field(default_factory=dict)
     gtin: str = ""
     shipping_days: int | None = None  # supplier's estimated delivery time
+    ships_from: str = ""  # ISO country of the warehouse that ships the order
+    shipping_method: str = ""  # supplier logistics service used for orders
+
+
+class SupplierOffer(BaseModel):
+    """One sourcing option for a product, used to compare suppliers."""
+
+    supplier: str
+    title: str
+    url: str
+    product_id: str = ""
+    variant_id: str = ""
+    price: float
+    shipping_cost: float | None = None
+    shipping_days_min: int | None = None
+    shipping_days_max: int | None = None
+    ships_from: str = ""
+    shipping_method: str = ""
+    stock: int | None = None
+    image: str = ""
+    auto_order: bool = False  # can dropkit place orders with this supplier automatically
+    note: str = ""
+
+    @property
+    def landed_cost(self) -> float | None:
+        return None if self.shipping_cost is None else round(self.price + self.shipping_cost, 2)
 
 
 class ItemSpecific(BaseModel):

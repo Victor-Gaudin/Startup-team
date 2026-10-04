@@ -46,6 +46,7 @@ class Settings:
     aliexpress_app_key: str = ""
     aliexpress_app_secret: str = ""
     aliexpress_access_token: str = ""
+    cj_api_key: str = ""
 
     target_margin: float = 0.20
     min_margin: float = 0.10
@@ -75,6 +76,7 @@ class Settings:
             aliexpress_app_key=_s("ALIEXPRESS_APP_KEY"),
             aliexpress_app_secret=_s("ALIEXPRESS_APP_SECRET"),
             aliexpress_access_token=_s("ALIEXPRESS_ACCESS_TOKEN"),
+            cj_api_key=_s("CJ_API_KEY"),
             target_margin=_f("DROPKIT_TARGET_MARGIN", 0.20),
             min_margin=_f("DROPKIT_MIN_MARGIN", 0.10),
             promoted_rate=_f("DROPKIT_PROMOTED_RATE", 0.04),
@@ -86,6 +88,14 @@ class Settings:
     @property
     def aliexpress_enabled(self) -> bool:
         return bool(self.aliexpress_app_key and self.aliexpress_app_secret and self.aliexpress_access_token)
+
+    @property
+    def cj_enabled(self) -> bool:
+        return bool(self.cj_api_key)
+
+    @property
+    def ship_to_country(self) -> str:
+        return {"EBAY_US": "US", "EBAY_GB": "GB", "EBAY_FR": "FR", "EBAY_DE": "DE"}.get(self.marketplace, "US")
 
     @property
     def ebay_enabled(self) -> bool:

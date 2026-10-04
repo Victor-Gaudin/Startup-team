@@ -27,12 +27,21 @@
   .published,.low,.shipped { color:var(--ok); } .medium,.manual,.paused { color:var(--warn); } .high,.blocked,.error { color:var(--bad); }
   .msg { background:var(--card); border-left:3px solid var(--accent); padding:8px 12px; margin-bottom:8px; }
   .muted { color:var(--muted); } a { color:var(--accent); }
+  .score { display:inline-block; min-width:44px; text-align:center; font-weight:600; padding:2px 8px; border-radius:6px; color:#fff; }
+  .s-hi { background:var(--ok); } .s-mid { background:var(--warn); } .s-lo { background:var(--bad); } .s-na { background:var(--muted); }
+  .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:8px; }
+  .form-grid label { display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--muted); }
+  .form-grid input { width:100%; }
+  details > summary { cursor:pointer; color:var(--accent); }
+  .bar { height:6px; background:var(--line); border-radius:3px; overflow:hidden; min-width:80px; }
+  .bar > i { display:block; height:100%; background:var(--accent); }
+  .money { font-variant-numeric:tabular-nums; }
 </style>
 </head>
 <body>
 <main>
   <h1>dropkit</h1>
-  <div class="sub">{{ settings.marketplace }} · {{ settings.ebay_env }} · eBay {{ "connected" if ebay_connected else "not connected" }} · AliExpress auto-order {{ "on" if settings.aliexpress_enabled else "off" }} · target margin {{ "%.0f"|format(settings.target_margin*100) }}%</div>
+  <div class="sub">{{ settings.marketplace }} · {{ settings.ebay_env }} · eBay {{ "connected" if ebay_connected else "not connected" }} · auto-order: AliExpress {{ "on" if settings.aliexpress_enabled else "off" }}, CJ {{ "on" if settings.cj_enabled else "off" }} · target margin {{ "%.0f"|format(settings.target_margin*100) }}%</div>
 
   {% for m in messages %}<div class="msg">{{ m }}</div>{% endfor %}
 
@@ -44,11 +53,118 @@
     <div class="card stat"><b>{{ stats.manual }}</b><span>need manual order</span></div>
   </div>
 
+  <div class="card" id="verify">
+    <h2>Verify a product</h2>
+    <p class="muted" style="margin-top:0">Found something? Enter what you know. Open the eBay sold search, filter to the last 30 days, and type the number of sales. Blank fields score neutral and lower the confidence.{% if settings.ebay_enabled %} Active listings and market price are filled in from eBay automatically.{% endif %}</p>
+    <form method="post" action="/verify">
+      <div class="form-grid">
+        <label>Product name *<input name="name" required placeholder="Magnetic car phone mount"></label>
+        <label>eBay search keywords<input name="keywords" placeholder="magnetic car phone mount"></label>
+        <label>Supplier URL (optional, fills cost)<input name="supplier_url" placeholder="https://..."></label>
+        <label>Supplier cost<input name="supplier_cost" inputmode="decimal" placeholder="4.00"></label>
+        <label>Supplier shipping<input name="supplier_shipping" inputmode="decimal" placeholder="2.00"></label>
+        <label>Delivery days to buyer<input name="delivery_days" inputmode="numeric" placeholder="7"></label>
+        <label>Your sale price (blank = target margin)<input name="sale_price" inputmode="decimal" placeholder="16.99"></label>
+        <label>Sold on eBay, last 30 days<input name="sold_30d" inputmode="numeric" placeholder="150"></label>
+        <label>Active competing listings<input name="active_listings" inputmode="numeric" placeholder="400"></label>
+        <label>Typical sold price<input name="market_median" inputmode="decimal" placeholder="17.50"></label>
+      </div>
+      <p><button>Score it</button></p>
+    </form>
+    {% if has_candidates %}
+    <form method="post" action="/candidates/load" class="inline" style="margin-bottom:10px"><button class="ghost">Load the 15 research candidates</button></form>
+    {% endif %}
+
+    <div class="scroll"><table>
+      <tr><th>Score</th><th>Product</th><th>Verdict</th><th>Price / profit per sale</th><th>Est. sales / month</th><th>Est. revenue / month</th><th>Est. profit / month</th><th></th></tr>
+      {% for c in checks %}{% set r = c.result %}{% set i = c.input %}
+      <tr id="check-{{ c.id }}">
+        <td>{% if r %}<span class="score {{ 's-hi' if r.score >= 70 else 's-mid' if r.score >= 50 else 's-lo' }}">{{ r.score }}</span>{% else %}<span class="score s-na">–</span>{% endif %}</td>
+        <td>{{ i.name }}{% if c.source == "research" %} <span class="pill">research</span>{% endif %}<br>
+          <a href="{{ c.sold_url }}" target="_blank" rel="noopener">eBay sold listings ↗</a>
+          {% if i.supplier_url %} · <a href="{{ i.supplier_url }}" target="_blank" rel="noopener">supplier ↗</a>{% endif %}</td>
+        <td>{% if r %}{{ r.verdict }}<br><span class="muted">confidence {{ r.confidence }}</span>{% endif %}</td>
+        <td class="money">{% if r %}{{ "%.2f"|format(r.price) }} / {{ "%.2f"|format(r.unit_profit) }} ({{ "%.0f"|format(r.margin*100) }}%){% endif %}</td>
+        <td class="money">{% if r and r.units %}{{ r.units[1] }} <span class="muted">({{ r.units[0] }}–{{ r.units[2] }})</span>{% else %}<span class="muted">needs sold count</span>{% endif %}</td>
+        <td class="money">{% if r and r.revenue %}{{ "%.0f"|format(r.revenue[1]) }} <span class="muted">({{ "%.0f"|format(r.revenue[0]) }}–{{ "%.0f"|format(r.revenue[2]) }})</span>{% endif %}</td>
+        <td class="money">{% if r and r.profit %}<b>{{ "%.0f"|format(r.profit[1]) }}</b> <span class="muted">({{ "%.0f"|format(r.profit[0]) }}–{{ "%.0f"|format(r.profit[2]) }})</span>{% endif %}</td>
+        <td>
+          <details><summary>Details / edit</summary>
+            {% if r %}
+            <table style="margin:6px 0">
+              {% for comp in r.components %}
+              <tr><td>{{ comp.name }}</td><td style="width:120px"><div class="bar"><i style="width:{{ (comp.points / comp.max_points * 100)|round }}%"></i></div></td>
+                  <td class="money">{{ "%.0f"|format(comp.points) }}/{{ comp.max_points }}</td><td class="muted">{{ comp.note }}</td></tr>
+              {% endfor %}
+            </table>
+            {% for w in r.warnings %}<div class="medium">! {{ w }}</div>{% endfor %}
+            {% endif %}
+            <form method="post" action="/verify" style="margin-top:8px">
+              <input type="hidden" name="check_id" value="{{ c.id }}">
+              <div class="form-grid">
+                <label>Name<input name="name" value="{{ i.name }}" required></label>
+                <label>Keywords<input name="keywords" value="{{ i.keywords or '' }}"></label>
+                <label>Supplier URL<input name="supplier_url" value="{{ i.supplier_url or '' }}"></label>
+                <label>Cost<input name="supplier_cost" value="{{ i.supplier_cost }}"></label>
+                <label>Shipping<input name="supplier_shipping" value="{{ i.supplier_shipping }}"></label>
+                <label>Delivery days<input name="delivery_days" value="{{ i.delivery_days if i.delivery_days is not none else '' }}"></label>
+                <label>Sale price<input name="sale_price" value="{{ i.sale_price if i.sale_price is not none else '' }}"></label>
+                <label>Sold 30 days<input name="sold_30d" value="{{ i.sold_30d if i.sold_30d is not none else '' }}"></label>
+                <label>Active listings<input name="active_listings" value="{{ i.active_listings if i.active_listings is not none else '' }}"></label>
+                <label>Typical sold price<input name="market_median" value="{{ i.market_median if i.market_median is not none else '' }}"></label>
+              </div>
+              <p><button>Re-score</button></p>
+            </form>
+            <form method="post" action="/suppliers" class="inline"><input type="hidden" name="query" value="{{ i.keywords or i.name }}"><button class="ghost">Find faster suppliers</button></form>
+            {% if i.supplier_url %}<form method="post" action="/import" class="inline"><input type="hidden" name="urls" value="{{ i.supplier_url }}"><button class="ghost">Import to my products</button></form>{% endif %}
+            <form method="post" action="/verify/{{ c.id }}/delete" class="inline"><button class="ghost">Remove</button></form>
+          </details>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="muted">Nothing verified yet.</td></tr>
+      {% endfor %}
+    </table></div>
+  </div>
+
+  <div class="card" id="suppliers">
+    <h2>Compare suppliers</h2>
+    <form method="post" action="/suppliers" class="inline">
+      <input name="query" placeholder="product keywords" required style="width:260px" value="{{ comparison.query if comparison else '' }}">
+      <button>Search suppliers</button>
+    </form>
+    {% if comparison %}
+      {% for e in comparison.errors %}<p class="muted">{{ e }}</p>{% endfor %}
+      {% if comparison.offers %}
+      <div class="scroll"><table style="margin-top:10px">
+        <tr><th>Supplier</th><th>Product</th><th>Ships from</th><th>Delivery</th><th>Cost + ship</th><th>Stock</th><th></th></tr>
+        {% for o in comparison.offers %}
+        <tr>
+          <td>{{ o.supplier }}{% if o.auto_order %}<br><span class="pill low">auto-order</span>{% endif %}</td>
+          <td><a href="{{ o.url }}" target="_blank" rel="noopener">{{ o.title[:70] }}</a>{% if o.note %}<br><span class="muted">{{ o.note }}</span>{% endif %}</td>
+          <td>{{ o.ships_from or "?" }}</td>
+          <td class="{{ 'low' if o.shipping_days_max is not none and o.shipping_days_max <= 8 else 'medium' }}">{{ (o.shipping_days_max ~ " days") if o.shipping_days_max is not none else "?" }}<br><span class="muted">{{ o.shipping_method }}</span></td>
+          <td class="money">{{ "%.2f"|format(o.price) }}{% if o.shipping_cost is not none %} + {{ "%.2f"|format(o.shipping_cost) }}{% endif %}</td>
+          <td>{{ o.stock if o.stock is not none else "?" }}</td>
+          <td><form method="post" action="/import" class="inline"><input type="hidden" name="urls" value="{{ o.url }}"><button class="ghost">Import</button></form></td>
+        </tr>
+        {% endfor %}
+      </table></div>
+      {% endif %}
+      <h2 style="margin-top:14px">Search elsewhere (fastest first)</h2>
+      <ul>
+        {% for l in comparison.links %}
+        <li><a href="{{ l.url }}" target="_blank" rel="noopener">{{ l.name }}</a> <span class="muted">– {{ l.note }}</span></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+
   <div class="row">
     <div class="card">
       <h2>Import products</h2>
       <form method="post" action="/import">
-        <textarea name="urls" placeholder="One AliExpress / Amazon / Cdiscount / shop URL per line"></textarea>
+        <textarea name="urls" placeholder="One AliExpress / CJdropshipping / Amazon / Cdiscount / shop URL per line"></textarea>
         <p><button>Import</button></p>
       </form>
     </div>

@@ -9,6 +9,7 @@ from dropkit.web.app import create_app
 
 def test_dashboard_renders_and_actions(settings, db):
     eng = Engine(settings, db, ebay=None, ali=None)
+    eng.ebay = eng.ali = eng.cj = None
     eng.add_product(SupplierProduct(supplier="generic", url="https://shop/p1", title="Cable Organizer <Kit>", price=3.0))
     client = TestClient(create_app(eng))
 
@@ -36,3 +37,34 @@ def test_cli_margin_and_status(tmp_path, monkeypatch):
     assert r.exit_code == 0 and "Marketplace" in r.output
     r = runner.invoke(cli_app, ["import-csv", "missing.csv"])
     assert r.exit_code != 0
+
+
+def test_dashboard_verify_flow(settings, db):
+    eng = Engine(settings, db, ebay=None, ali=None, cj=None)
+    eng.ebay = eng.ali = eng.cj = None  # offline: no eBay/supplier lookups
+    client = TestClient(create_app(eng))
+
+    r = client.post("/verify", data={"name": "Magnetic car phone mount", "supplier_cost": "4", "supplier_shipping": "2",
+                                     "delivery_days": "6", "sold_30d": "180", "active_listings": "600", "market_median": "$16.50",
+                                     "sale_price": "16.99"}, follow_redirects=True)
+    assert r.status_code == 200 and "score 89/100 - List it" in r.text and "/month profit" in r.text
+    assert "LH_Sold=1" in r.text and "Re-score" in r.text
+
+    check_id = db.checks()[0]["id"]
+    r = client.post("/verify", data={"check_id": str(check_id), "name": "Magnetic car phone mount", "supplier_cost": "4",
+                                     "supplier_shipping": "2", "sold_30d": "5"}, follow_redirects=True)
+    assert "score 50/100" in r.text
+    assert len(db.checks()) == 1 and db.checks()[0]["score"] < 89  # re-scored in place
+
+    r = client.post("/verify", data={"name": "No cost"}, follow_redirects=True)
+    assert "Verification failed" in r.text
+
+    r = client.post("/candidates/load", follow_redirects=True)
+    # "Magnetic car phone mount" is already verified, so its research duplicate is skipped
+    assert "Loaded 14 research candidates" in r.text and len(db.checks()) == 15
+
+    r = client.post("/suppliers", data={"query": "magnetic mount"}, follow_redirects=True)
+    assert "CJ_API_KEY" in r.text and "shipFromCountry=US" in r.text
+
+    r = client.post(f"/verify/{check_id}/delete", follow_redirects=True)
+    assert len(db.checks()) == 14
