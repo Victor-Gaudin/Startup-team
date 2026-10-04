@@ -1,0 +1,39 @@
+name: Product research
+
+# Every 2 days at 06:52 UTC, plus manual runs. Needs the ANTHROPIC_API_KEY repository secret.
+on:
+  schedule:
+    - cron: "52 6 */2 * *"
+  workflow_dispatch:
+    inputs:
+      niche:
+        description: "Niche to research"
+        default: "phone and gaming accessories"
+      count:
+        description: "Number of products"
+        default: "1"
+
+permissions:
+  contents: write
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+      - name: Research
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EBAY_MARKETPLACE: EBAY_US
+        run: dropkit research --niche "${{ github.event.inputs.niche || 'phone and gaming accessories' }}" --count "${{ github.event.inputs.count || '1' }}"
+      - name: Commit report
+        run: |
+          git config user.name "dropkit-bot"
+          git config user.email "dropkit-bot@users.noreply.github.com"
+          git add research/
+          git diff --cached --quiet || git commit -m "Product research $(date -u +%F)"
+          git push
